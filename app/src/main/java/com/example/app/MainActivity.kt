@@ -1,13 +1,18 @@
 package com.example.app
 
 import android.app.Activity
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.os.IBinder
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,17 +45,30 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.text.isDigitsOnly
 import com.example.app.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
-    lateinit var calculadora: Calculator
+
+    private lateinit var mService: CalculadoraService
+    private var mBound: Boolean = false
+
+    private val connection = object : ServiceConnection{
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as CalculadoraService.CalculadoraBinder
+            mService = binder.getService()
+            mBound = true
+            Toast.makeText(this@MainActivity.baseContext, "Bind feito com sucesso", Toast.LENGTH_SHORT).show()
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound = false
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        calculadora = Calculator(this)
         setContent {
             val activity = LocalContext.current as Activity
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LOCKED
             activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             var conteudoVisor by remember {
                 mutableStateOf("")
@@ -58,19 +76,34 @@ class MainActivity : ComponentActivity() {
             }
             AppTheme {
                 Column {
-                    ParteDeCima(conteudoVisor )
-                    ParteDeBaixo{ novoTexto ->
+                    Visor(conteudoVisor )
+                    Teclado(/*mService,*/{mBound}) { novoTexto ->
                         conteudoVisor = novoTexto
                     }
-
                 }
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+
+//        Intent(this,CalculadoraService::class.java).also{
+//                intent -> bindService(intent,connection, Context.BIND_AUTO_CREATE)
+//        }
+        var teste = bindService(Intent(this,CalculadoraService::class.java),connection, Context.BIND_AUTO_CREATE)
+        if(teste)
+            Toast.makeText(this@MainActivity.baseContext, "Bind feito com sucesso", Toast.LENGTH_SHORT).show()
+        else
+            Toast.makeText(this@MainActivity.baseContext, "Bind não foi concluido", Toast.LENGTH_SHORT).show()
+
+//        if(mBound)
+//            mService.digitos("2+5-9/7");
+    }
 }
 
 @Composable
-fun ParteDeCima(conteudoVisor: String){
+fun Visor(conteudoVisor: String){
     Card (modifier = Modifier
         .fillMaxHeight(0.3f)
         .fillMaxWidth()
@@ -95,8 +128,7 @@ fun ParteDeCima(conteudoVisor: String){
 }
 
 @Composable
-fun ParteDeBaixo(conteudoVisor:(String)->Unit){
-//    val calculadora: Calculator = remember { get() }
+fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVisor:(String)->Unit){
     var textoTemporario by remember { mutableStateOf("") }
     Box(modifier = Modifier
         .fillMaxHeight()
@@ -108,7 +140,7 @@ fun ParteDeBaixo(conteudoVisor:(String)->Unit){
         Box(modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)){
-
+            val context = LocalContext.current
             Column(modifier = Modifier
                 .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceEvenly) {
@@ -205,8 +237,12 @@ fun ParteDeBaixo(conteudoVisor:(String)->Unit){
                         conteudoVisor(textoTemporario)
                     }
                     Botao("=") {
-                        textoTemporario = digitos(textoTemporario).toString()
-                        conteudoVisor(textoTemporario)
+//                        if(checkBind()) {
+//                            textoTemporario = mService.digitos(textoTemporario).toString()
+
+                        Toast.makeText(context, "Bind foi feito?" + checkBind(), Toast.LENGTH_SHORT).show()
+                            conteudoVisor(textoTemporario)
+//                        }
                     }
                 }
             }
@@ -214,24 +250,6 @@ fun ParteDeBaixo(conteudoVisor:(String)->Unit){
     }
 }
 
-fun digitos(visor:String) : MutableList<Any>{
-    val lista = mutableListOf<Any>()
-    var digitoAtual = ""
-    for(caracter in visor){
-        if(caracter.isDigit() || caracter ==',' || caracter == '.'){
-            if (caracter == ',') digitoAtual +='.'
-            else digitoAtual += caracter
-        }
-        else{
-            lista.add(digitoAtual.toFloat())
-            digitoAtual = ""
-            lista.add(caracter)
-        }
-    }
-    if (digitoAtual != "")
-        lista.add(digitoAtual)
-    return lista
-}
 
 @Composable
 fun Botao(
@@ -251,9 +269,7 @@ fun Botao(
             contentAlignment = Alignment.Center){
                 Text(text = tecla, color = Color.White,
                     fontSize = 50.sp, textAlign = TextAlign.Center)
-
             }
-
     }
 }
 
