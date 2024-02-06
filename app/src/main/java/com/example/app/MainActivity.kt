@@ -244,6 +244,7 @@ fun Teclado(mService: CalculadoraService?,checkBind : ()->Boolean ,conteudoVisor
                         if(checkBind()) {
                             qtdParenteses = 0
                             textoTemporario = mService?.calculaResultados(textoTemporario)!!
+//                            textoTemporario = mService?.digitos(textoTemporario).toString()
                             conteudoVisor(textoTemporario)
                         }
                     }
@@ -270,14 +271,19 @@ fun adicionaNum(visor:String, num: Char): String{
 
 fun adicionaSinal(visor:String, sinal: Char): String {
     var newVisor = visor
+
     if(sinal == '-'){
         if(newVisor.isEmpty()) return "-"
-        if(!(newVisor.last().isDigit()) || newVisor.last() == '('|| newVisor.last() == ')') newVisor = newVisor.dropLast(1)
+        if(!(newVisor.last().isDigit() || newVisor.last() == '('|| newVisor.last() == ')'))
+            newVisor = newVisor.dropLast(1)
         return newVisor.plus(sinal)
     }else {
+        if(newVisor.last() == '(') return visor
         if(newVisor.isEmpty()) return ""
-        if(newVisor.length == 1 && !(newVisor.last().isDigit())) return ""
-        if(!(newVisor.last().isDigit())) newVisor = newVisor.dropLast(1)
+        if(newVisor.length == 1 && !(newVisor.last().isDigit()))
+            return ""
+        if(!(newVisor.last().isDigit() || newVisor.last() == '('|| newVisor.last() == ')') )
+            newVisor = newVisor.dropLast(1)
         return newVisor.plus(sinal)
     }
 }
