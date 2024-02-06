@@ -8,7 +8,6 @@ import android.content.ServiceConnection
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.IBinder
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -49,7 +48,7 @@ import com.example.app.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var mService: CalculadoraService
+    private var mService: CalculadoraService? = null
     private var mBound: Boolean = false
 
     private val connection = object : ServiceConnection{
@@ -57,7 +56,6 @@ class MainActivity : ComponentActivity() {
             val binder = service as CalculadoraService.CalculadoraBinder
             mService = binder.getService()
             mBound = true
-            Toast.makeText(this@MainActivity.baseContext, "Bind feito com sucesso", Toast.LENGTH_SHORT).show()
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
@@ -76,8 +74,8 @@ class MainActivity : ComponentActivity() {
             }
             AppTheme {
                 Column {
-                    Visor(conteudoVisor )
-                    Teclado(/*mService,*/{mBound}) { novoTexto ->
+                    Visor(conteudoVisor)
+                    Teclado(mService,{mBound}) { novoTexto ->
                         conteudoVisor = novoTexto
                     }
                 }
@@ -88,17 +86,9 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
 
-//        Intent(this,CalculadoraService::class.java).also{
-//                intent -> bindService(intent,connection, Context.BIND_AUTO_CREATE)
-//        }
-        var teste = bindService(Intent(this,CalculadoraService::class.java),connection, Context.BIND_AUTO_CREATE)
-        if(teste)
-            Toast.makeText(this@MainActivity.baseContext, "Bind feito com sucesso", Toast.LENGTH_SHORT).show()
-        else
-            Toast.makeText(this@MainActivity.baseContext, "Bind não foi concluido", Toast.LENGTH_SHORT).show()
-
-//        if(mBound)
-//            mService.digitos("2+5-9/7");
+        Intent(this,CalculadoraService::class.java).also{
+                intent -> bindService(intent,connection, Context.BIND_AUTO_CREATE)
+        }
     }
 }
 
@@ -112,7 +102,8 @@ fun Visor(conteudoVisor: String){
     )
     {
         Box (modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.onSecondary),
             contentAlignment = Alignment.CenterEnd
         ){
             Text(text = conteudoVisor, fontSize = 50.sp, maxLines = 1,
@@ -128,7 +119,7 @@ fun Visor(conteudoVisor: String){
 }
 
 @Composable
-fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVisor:(String)->Unit){
+fun Teclado(mService: CalculadoraService?,checkBind : ()->Boolean ,conteudoVisor:(String)->Unit){
     var textoTemporario by remember { mutableStateOf("") }
     Box(modifier = Modifier
         .fillMaxHeight()
@@ -140,7 +131,9 @@ fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVi
         Box(modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)){
-            val context = LocalContext.current
+            var qtdParenteses by remember {
+                mutableIntStateOf(0)
+            }
             Column(modifier = Modifier
                 .fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceEvenly) {
@@ -148,16 +141,22 @@ fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVi
                     .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly){
                     Botao("AC") {
+                        qtdParenteses = 0
                         textoTemporario = ""
                         conteudoVisor(textoTemporario)
                     }
-                    Botao("( )") {}
+                    Botao("( )") {
+                        textoTemporario = adicionaParenteses(textoTemporario,qtdParenteses){
+                            qtdParenteses += it
+                        }
+                        conteudoVisor(textoTemporario)
+                    }
                     Botao("%") {
-                        textoTemporario += "%"
+                        textoTemporario = adicionaSinal(textoTemporario,'%')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("/") {
-                        textoTemporario += "/"
+                        textoTemporario = adicionaSinal(textoTemporario,'/')
                         conteudoVisor(textoTemporario)
                     }
                 }
@@ -165,19 +164,19 @@ fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVi
                     .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly){
                     Botao("7") {
-                        textoTemporario += "7"
+                        textoTemporario = adicionaNum(textoTemporario,'7')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("8") {
-                        textoTemporario += "8"
+                        textoTemporario = adicionaNum(textoTemporario,'8')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("9") {
-                        textoTemporario += "9"
+                        textoTemporario = adicionaNum(textoTemporario,'9')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("x") {
-                        textoTemporario += "x"
+                        textoTemporario = adicionaSinal(textoTemporario,'x')
                         conteudoVisor(textoTemporario)
                     }
                 }
@@ -185,19 +184,19 @@ fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVi
                     .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly){
                     Botao("4") {
-                        textoTemporario += "4"
+                        textoTemporario = adicionaNum(textoTemporario,'4')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("5") {
-                        textoTemporario += "5"
+                        textoTemporario = adicionaNum(textoTemporario,'5')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("6") {
-                        textoTemporario += "6"
+                        textoTemporario = adicionaNum(textoTemporario,'6')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("-") {
-                        textoTemporario += "-"
+                        textoTemporario = adicionaSinal(textoTemporario,'-')
                         conteudoVisor(textoTemporario)
                     }
                 }
@@ -205,19 +204,19 @@ fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVi
                     .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly){
                     Botao("1") {
-                        textoTemporario += "1"
+                        textoTemporario = adicionaNum(textoTemporario,'1')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("2") {
-                        textoTemporario += "2"
+                        textoTemporario = adicionaNum(textoTemporario,'2')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("3") {
-                        textoTemporario += "3"
+                        textoTemporario = adicionaNum(textoTemporario,'3')
                         conteudoVisor(textoTemporario)
                     }
                     Botao("+") {
-                        textoTemporario += "+"
+                        textoTemporario = adicionaSinal(textoTemporario,'+')
                         conteudoVisor(textoTemporario)
                     }
                 }
@@ -233,20 +232,53 @@ fun Teclado(/*mService: CalculadoraService,*/checkBind : ()->Boolean ,conteudoVi
                         conteudoVisor(textoTemporario)
                     }
                     Botao("<-") {
+                        if(textoTemporario.isEmpty()) return@Botao
+                        if(textoTemporario.last() == '(')
+                            qtdParenteses--
+                        if(textoTemporario.last() == ')')
+                            qtdParenteses++
                         textoTemporario = textoTemporario.dropLast(1)
                         conteudoVisor(textoTemporario)
                     }
                     Botao("=") {
-//                        if(checkBind()) {
-//                            textoTemporario = mService.digitos(textoTemporario).toString()
-
-                        Toast.makeText(context, "Bind foi feito?" + checkBind(), Toast.LENGTH_SHORT).show()
+                        if(checkBind()) {
+                            qtdParenteses = 0
+                            textoTemporario = mService?.calculaResultados(textoTemporario)!!
                             conteudoVisor(textoTemporario)
-//                        }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+fun adicionaParenteses(textoTemporario: String, qtdParenteses: Int, adicionaParenteses: (Int)->Unit): String {
+
+    if(qtdParenteses > 0 && (textoTemporario.last().isDigit() || textoTemporario.last() == ')')){
+        adicionaParenteses(-1)
+        return textoTemporario + ')'
+    }
+
+    adicionaParenteses(1)
+    return textoTemporario + '('
+}
+
+fun adicionaNum(visor:String, num: Char): String{
+    return visor.plus(num)
+}
+
+fun adicionaSinal(visor:String, sinal: Char): String {
+    var newVisor = visor
+    if(sinal == '-'){
+        if(newVisor.isEmpty()) return "-"
+        if(!(newVisor.last().isDigit()) || newVisor.last() == '('|| newVisor.last() == ')') newVisor = newVisor.dropLast(1)
+        return newVisor.plus(sinal)
+    }else {
+        if(newVisor.isEmpty()) return ""
+        if(newVisor.length == 1 && !(newVisor.last().isDigit())) return ""
+        if(!(newVisor.last().isDigit())) newVisor = newVisor.dropLast(1)
+        return newVisor.plus(sinal)
     }
 }
 
@@ -258,17 +290,16 @@ fun Botao(
     callback: () -> Unit
 ){
     Card (modifier = modifier
-        .clickable { callback() }
         .height(90.dp)
         .width(90.dp),
         shape = RoundedCornerShape(100)
     ){
         Box(modifier = Modifier
-            .background(color = Color.LightGray)
-            .fillMaxSize(),
+            .background(color = MaterialTheme.colorScheme.surfaceVariant)
+            .fillMaxSize()
+            .clickable { callback() },
             contentAlignment = Alignment.Center){
-                Text(text = tecla, color = Color.White,
-                    fontSize = 50.sp, textAlign = TextAlign.Center)
+                Text(text = tecla, fontSize = 50.sp, textAlign = TextAlign.Center)
             }
     }
 }
