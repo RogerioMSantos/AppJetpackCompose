@@ -149,10 +149,13 @@ class CalculadoraService : Service(){
                     var digitoProx = list[i + 1]
                     if (digitoProx == ')') return newList
                     if (digitoProx == '(') {
+                        if(i+1 >= list.lastIndex ){
+                            return newList
+                        }
                         digitoProx = calculaResultadosRecursivo(
                             list.subList(
                                 i + 2,
-                                list.lastIndex + 1
+                                list.lastIndex
                             )
                         ).last() as Float
                         parenteses = true
@@ -194,10 +197,14 @@ class CalculadoraService : Service(){
 
         for(caracter in visor){
             if(caracter == '(' && digitoAtual.isNotBlank()){
-                lista.add(digitoAtual.toFloat())
+                if(digitoAtual != "-") {
+                    lista.add(digitoAtual.toFloat())
+                    lista.add('x')
+                    lista.add('(')
+
+                }
+                else lista.add(digitoAtual)
                 digitoAtual = ""
-                lista.add('x')
-                lista.add('(')
                 continue
             }
 
@@ -209,8 +216,8 @@ class CalculadoraService : Service(){
             }
             if(caracter.isDigit() || caracter ==',' || caracter == '.'){
                 if(lista.size > 0 && lista.last() == ')') lista.add('x')
-                if (caracter == ',') digitoAtual +='.'
-                else digitoAtual += caracter
+                digitoAtual += if (caracter == ',') '.'
+                else caracter
             }
             else if(caracter == '-' && digitoAtual == "")
                 digitoAtual = "-"
@@ -223,6 +230,7 @@ class CalculadoraService : Service(){
         }
         if (digitoAtual != "")
             lista.add(digitoAtual.toFloat())
+        while(lista.last() !is Float) lista.removeLast()
         return lista
     }
 }

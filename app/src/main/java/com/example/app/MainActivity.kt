@@ -278,8 +278,8 @@ fun adicionaSinal(visor:String, sinal: Char): String {
             newVisor = newVisor.dropLast(1)
         return newVisor.plus(sinal)
     }else {
-        if(newVisor.last() == '(') return visor
         if(newVisor.isEmpty()) return ""
+        if(newVisor.last() == '(') return visor
         if(newVisor.length == 1 && !(newVisor.last().isDigit()))
             return ""
         if(!(newVisor.last().isDigit() || newVisor.last() == '('|| newVisor.last() == ')') )
